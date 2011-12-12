@@ -1,6 +1,6 @@
 package Math::Prime::FastSieve;
 
-use 5.014002;
+use 5.008000;
 use strict;
 use warnings;
 
@@ -13,11 +13,11 @@ our @EXPORT_OK = qw( primes ); # We can export primes().
 
 our @EXPORT    = qw(        ); # Export nothing by default.
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 use Inline CPP      => 'DATA',
-           VERSION  => '0.01',
+           VERSION  => '0.02',
            NAME     => 'Math::Prime::FastSieve';
 
 
@@ -35,7 +35,7 @@ facilitate.
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 
 =head1 SYNOPSIS

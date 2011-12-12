@@ -20,4 +20,4 @@ no_index:
 requires:
   Inline: 0.44
   Inline::CPP: 0.33
-version: 0.01
+version: 0.02
