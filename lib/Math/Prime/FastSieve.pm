@@ -1,6 +1,6 @@
 package Math::Prime::FastSieve;
 
-use 5.008000;
+use 5.006000;
 use strict;
 use warnings;
 
@@ -13,68 +13,93 @@ our @EXPORT_OK = qw( primes ); # We can export primes().
 
 our @EXPORT    = qw(        ); # Export nothing by default.
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 use Inline CPP      => 'DATA',
-           VERSION  => '0.02',
+           VERSION  => '0.03',
            NAME     => 'Math::Prime::FastSieve';
+
+# No real code here.  Everything is implemented in pure C++ using
+# Inline::CPP.
 
 
 1;
+
 
 __DATA__
 
 =head1 NAME
 
-Math::Prime::FastSieve - Generate a list of all primes less than 'n'.
-Do it quickly.  Possibly faster than any other method on CPAN.
+Math::Prime::FastSieve - Generate a list of all primes less than or equal
+to C<$n>. Do it quickly.
 
 While we're at it, supply a few additional tools that a Prime Sieve
-facilitate.
+facilitates.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 
 =head1 SYNOPSIS
 
 This module provides an optimized implementation of the Sieve of
-Eratosthenes, and uses it to return a list of all primes up to any
-integer specified, within the limitations of addressable memory.
+Eratosthenes, and uses it to return a reference to an array all primes up to
+any integer specified, within the limitations of addressable memory.
 
 Additionally the module provides access to other Prime-related functions
 that are facilitated as a by-product of having a really fast Prime
 Sieve.
 
 At the time of writing, the C<primes> function will return all primes
-up to 'n' faster than any other module I can find on CPAN (including
-Math::Prime::XS).  While a segmented sieve (which this isn't) would
+up to and including C<$n> faster than any other module I can find on CPAN
+(including Math::Prime::XS).  While a segmented sieve (which this isn't) would
 extend the range of primes accessible, the fact that this module uses
 a bit-sieve means that primes over a billion are easily within reach
 of most modern systems.
 
 
-    # The simple (and fastest) interface:
+    # ----------    The simple (and fastest) interface:    ----------
     use Math::Prime::FastSieve qw( primes );
 
+    # Obtain an reference to an array containing all primes less than or
+    # equal to 5 Million.
     my $aref = primes( 5_000_000 );
 
 
 
-    #The object (far more flexible) interface.
+    # ----------   The object (far more flexible) interface.   ----------
 
     # Create a new sieve and flag all primes less or equal to n.
     my $sieve = Math::Prime::FastSieve::Sieve->new( 5_000_000 );
 
+    # Obtain a ref to an array containing all primes <= 5 Million.
     my $aref = $sieve->primes( 5_000_000 );
+
+    # Obtain a ref to an array containing all primes >= 5,
+    # and <= 16.
+    my $aref = $sieve->ranged_primes( 5, 16 );
+
+    # Query the sieve: Is 17 prime? Return a true or false value.
     my $result = $sieve->isprime( 17 );
+
+    # Get the value of the nearest prime less than or equal to 42.
     my $less_or_equal = $sieve->nearest_le( 42 );
+
+    # Get the value of the nearest prime greater than or equal to 42.
     my $greater_or_equal = $sieve->nearest_ge( 42 );
+
+    # Count how many primes exist within the sieve (ie, count all primes less
+    # than or equal to 5 Million, assuming we instantiated the sieve with
+    # ...->new( 5_000_000 );.
     my $num_found = $sieve->count_sieve();
+
+    # Count how many primes fall between 1 and 42 inclusive.
     my $quantity_le = $sieve->count_le( 42 );
-    my $fourty_second_prime = $sieve->nth( 42 );
+
+    # Return the value of the 42nd prime number.
+    my $fourty_second_prime = $sieve->nth_prime( 42 );
 
 
 =head1 EXPORT
@@ -82,15 +107,19 @@ of most modern systems.
 Exports nothing by default.  If you ask nicely it will export the single
 subroutine, C<primes>.
 
+    use Math::Prime::FastSieve qw( primes );  # Import primes().
+    use Math::Prime::FastSieve;               # No imports.
+
 =head1 SUBROUTINES/METHODS
 
 This module provides two modus operandi.  The simplest also happens to
 be the fastest way of generating a list of all primes up to and
-including C<$n>.  That is via a direct call to the C<primes($n)> function.
+including C<$n>.  That is via a direct call to the C<primes($n)>
+function.
 
 The more powerful way to use this module is via its object oriented
-interface.  With that approach, the constructor (C<new($n)>) creates a
-prime sieve flagging all primes from 2 to C<$n> inclusive, and returins
+interface.  With that approach, the constructor C<new($n)> creates a
+prime sieve flagging all primes from 2 to C<$n> inclusive, and returns
 a Sieve object.  That object may then be queried by way of accessor
 methods to get at any of the following:
 
@@ -98,6 +127,9 @@ methods to get at any of the following:
 
 =item * C<primes()>
 A list of all primes within the sieve.
+
+=item * C<ranged_primes( $lower, $upper )>
+A list of all primes >= C<$lower>, and <= C<$upper>.
 
 =item * C<isprime($n)>
 A primality test for any integer within the bounds of the sieve.
@@ -123,8 +155,9 @@ Return the C<$n>th prime, within the bounds of the sieve.
 =back
 
 Because the sieve is created when the object is instantiated, many of
-the tests you might call on the sieve object can be either O(n),
-O(log n), or even O(1), depending on the test.
+the tests you might call on the sieve object will execute quite quickly.
+Each of the subs and methods documented below will also attempt to describe
+the computational and memory complexity of the function.
 
 =head1 The Standard Interface
 
@@ -133,7 +166,7 @@ O(log n), or even O(1), depending on the test.
 Provide a fast and simple means of generating a big list of prime
 numbers.
 
-=head2 primes()
+=head3 primes()
 
 This is a regular function (ie, not an object method).
 
@@ -164,7 +197,8 @@ and there.
 
 =back
 
-The result is a prime number generator that is...fast.
+The result is a prime number generator that is...fast.  It operates in
+O( n log log n ) time, with a O(n) memory growth rate.
 
 =head1 The Object Oriented Interface
 
@@ -184,7 +218,7 @@ The standard interface is faster.  But the object interface is still
 very fast, and provides greater flexibility.
 
 
-=head2 new()
+=head3 new()
 
 Class method of C<Math::Prime::FastSieve::Sieve>  Requires a single
 integer parameter that represents the largest value to be held in the
@@ -195,17 +229,11 @@ sieve.  For example:
 This will create a Sieve object that flags all integers from 2 to
 1 billion that are prime.
 
-Calling C<new()> is an O(n log log n) operation
-
-=head2 DESTROY()
-
-You don't need to call this yourself, but it does exist.  When your
-Sieve object falls out of scope and C<DESTROY()> is automatically
-invoked by Perl, the bit sieve held in your Sieve object will be
-freed.
+Calling C<new()> is an O(n log log n) operation.  The memory growth is at a
+rate that is 1/8th the rate of growth of C<$n>.
 
 
-=head2 primes()
+=head3 primes()
 
 This works just like the standard C<primes()> function, except that it
 is a member function of your Sieve object, and also (behind the scenes)
@@ -223,8 +251,33 @@ array ref pointing to an empty array.
 
 The C<primes()> method is an O(n) operation for both time and memory.
 
+=head3 ranged_primes()
 
-=head2 isprime()
+This behaves exactly like the C<primes()> method, except that you
+specify a lower and upper limit within the bounds of the sieve.  The
+return value is a reference to an array holding all prime numbers
+greater than or equal to the lower limit, and less than or equal to the
+upper limit.
+
+The purpose of this method is to allow you to create a sieve ( with
+C<new()> ), and then get results in a segmented form.  The reasons this
+may be desirable are two-fold:  First, you may only need a subset.
+Second, this gives you finer control over how much memory is gobbled up
+by the list returned.  For a huge sieve the sieve's memory footprint is
+much smaller than the list of integers that are flagged as prime.  By
+dealing with that list in chunks you can have a sieve of 2.14 billion
+prime flags, but never hold that big of a list of integers in memory
+all at once.
+
+    my $primes_ref = $sieve->ranged_primes( 5, 16 );
+    # $primes_ref now holds [ 5, 7, 11, 13 ].
+
+The time complexity of this method is O(n) where 'n' is the upper limit
+minus the lower limit.  So a range of 5_000_000 .. 5_000_010 consumes as
+much time as 100 .. 110.
+
+
+=head3 isprime()
 
 Pass a parameter consisiting of a single integer within the range of the
 Sieve object.  Returns true if the integer is prime, false otherwise.
@@ -240,7 +293,7 @@ false.
 This is an O(1) operation.
 
 
-=head2 nearest_le()
+=head3 nearest_le()
 
 The C<nearest_le()> method returns the closest prime that is less than
 or equal to its integer parameter.  Passing an out of bounds parameter
@@ -249,10 +302,10 @@ will return a C<0>.
     my $nearest_less_or_equal = $sieve->nearest_le( 42 );
 
 Since the nearest prime is never very far away, this is an
-O( log log n ) operation.
+O( n / ( log n ) ) operation.
 
 
-=head2 nearest_ge()
+=head3 nearest_ge()
 
 Like the C<nearest_le()> method, but this method returns the prime that
 is greater than or equal to the input parameter.  If the input param. is
@@ -260,7 +313,7 @@ out of range, or if the next prime is out of range, a C<0> is returned.
 
     my $nearest_greater_or_equal = $sieve->nearest_ge( 42 );
 
-This is also an O( log log n ) operation.
+This is also an O( n / ( log n ) ) operation.
 
 By adding one to the return value and passing that new value as a
 parameter to the C<nearest_ge()> method again and again in a loop it is
@@ -269,7 +322,7 @@ at once.  Of course it's not going to be as fast as getting the big
 list all at once, but you can't have everything in life, now can you?
 
 
-=head2 count_sieve()
+=head3 count_sieve()
 
 Takes no input parameter.  Counts all of the primes in the sieve and
 returns the count.  The first time this is called on a Sieve object
@@ -277,7 +330,7 @@ the count takes O(n) time.  Subsequent calls benefit from the first
 run being cached, and thus become O(1) time.
 
 
-=head2 count_le()
+=head3 count_le()
 
 Pass an integer within the range of the sieve as a parameter.  Return
 value is a count of how many primes are less than or equal to that
@@ -287,9 +340,9 @@ the sieve, the results are cached for future calls to C<count_sieve()>.
 This is an O(n) operation.
 
 
-=head2 nth_prime()
+=head3 nth_prime()
 
-This method returns the n-th prime, where n is the cardinal index in the
+This method returns the n-th prime, where C<$n> is the cardinal index in the
 sequence of primes.  For example:
 
     say $sieve->nth_prime(1) # prints 2: the first prime is 2.
@@ -303,12 +356,15 @@ If there is no nth prime in the bounds of the sieve C<0> is returned.
 =head1 Implementation Notes
 
 The sieve is implemented as a bit sieve using a C++ vector<bool>.  All
-integers from 0 to C<$n> are represented in the sieve (evens too).
-A bit sieve is highly efficient from a memory standpoint. However,
-because the extra cycles needed to represent only odd numbers in the
-sieve are too computationally expensive to justify, the sieve doesn't
-bother with that one potential additional memory optimization.  It just
-seemed that the speed tradeoff wasn't worthwhile.
+integers from 0 to C<$n> are represented based on their index within the sieve
+(evens too). A bit sieve is highly efficient from a memory standpoint because
+obviously it only consumes one byte per eight integers. It could be
+further improved (from a memory standpoint) by only representing odd
+integers within the sieve. However, an odds-only sieve would introduce
+additional computational cycles inside of a very tight loop, and
+consequently degrade time performance.  For that reason I chose to leave
+evens in the sieve, doubling the sieve footprint but trimming a lot of
+potential computational overhead away.
 
 So, while a bit sieve was used for memory efficiency, just about every
 other optimization favored reducing time complexity.
@@ -317,17 +373,31 @@ Furthermore, all functions and methods are implemented in C++ by way of
 Inline::CPP.  In fact, the sieve itself is never exposed to Perl (this
 decision is both a time and memory optimization).
 
+A side effect of using a bit sieve is that the sieve itself actually
+requires less memory than the integer list of primes sifted from it.
+That means that the memory bottleneck with the C<primes()> function, as
+well as with the C<primes()> object method is not, in fact, the sieve,
+but the list passed back to Perl via an array-ref.
 
+If you find that your system memory isn't allowing you to call C<primes>
+with as big an integer as you wish, use the object oriented interface.
+C<new> will generate a sieve up to the largest integer your system
+allows (often a little over 2.14 billion).  Then rather than calling
+the C<primes> method, use C<nearest_ge> to iterate over the list.
+Of course this is slower, but it beats running out of memory doesn't it?
 
 
 =head1 Installation
 
 There is a dependancy: Inline::CPP (Inline C++).  Inline::CPP has
-Inline::C, Inline, and Parse::RecDescent as dependancies.  Additionally,
-your system must have a C++ compiler that is compatible with the
-compiler used to build Perl.  In theory it all these dependancies may
-sound like a big pain.  In practice, most users should be able to
-install this module with the familiar incantations:
+Inline::C, Inline, and Parse::RecDescent as dependancies.  You also need
+Inline::MakeMaker, which is invoked by Makefile.PL in place of
+ExtUtils::MakeMaker.
+
+Additionally, your system must have a C++ compiler that is compatible with the
+compiler used to build Perl.  In theory it all these dependancies may sound
+like a big pain.  In practice, most users should be able to install this
+module with the familiar incantations:
 
     cpan Math::Prime::FastSieve
 
@@ -347,9 +417,11 @@ David Oswald, C<< <davido at cpan.org> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-math-prime-FastSieve at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Math-Prime-FastSieve>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+Please report any bugs or feature requests to
+C<bug-math-prime-FastSieve at rt.cpan.org>, or through the web interface
+at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Math-Prime-FastSieve>.
+I will be notified, and then you'll automatically be notified of
+progress on your bug as I make changes.
 
 
 
@@ -409,19 +481,44 @@ __CPP__
 #include <vector>
 using namespace std;
 
+/* Class Sieve below.  Perl sees it as a class named
+ * "Math::Prime::FastSieve::Sieve".  The constructor is mapped to
+ * "new()" within Perl, and the destructor to "DESTROY()".  All other
+ * methods are mapped with the same name as declared in the class.
+ *
+ * Therefore, Perl sees this class approximately like this:
+ *
+ * package Math::Prime::FastSieve;
+ *
+ * sub new {
+ *     my $class = shift;
+ *     my $n     = shift;
+ *     my $self = bless {}, $class;
+ *     $self->{max_n} = n;
+ *     $self->{num_primes} = 0;
+ *     # Build the sieve here...
+ *     # I won't bother translating it to Perl.
+ *     $self->{sieve} = $primes;  // A reference to a bit vector.
+ *     return $self;
+ *  }
+ *
+ */
+
 
 class Sieve
 {
     public:
-        Sieve           ( int n ); // Constructor.
-        ~Sieve          (       ); // Destructor.
-        bool isprime    ( int n ); // Test if n is prime.
-        SV*  primes     ( int n ); // Return all primes in an aref.
-        int  nearest_le ( int n ); // Return nearest prime <= n.
-        int  nearest_ge ( int n ); // Return nearest prime >= n.
-        int  nth_prime  ( int n ); // Return the nth prime.
-        int  count_sieve(       ); // Return number of primes in sieve.
-        int  count_le   ( int n ); // Return number of primes <= n.
+        Sieve            ( int n ); // Constructor. Perl sees "new()".
+        ~Sieve           (       ); // Destructor. Seen as "DESTROY()".
+        bool isprime     ( int n ); // Test if n is prime.
+        SV*  primes      ( int n ); // Return all primes in an aref.
+        int  nearest_le  ( int n ); // Return nearest prime <= n.
+        int  nearest_ge  ( int n ); // Return nearest prime >= n.
+        int  nth_prime   ( int n ); // Return the nth prime.
+        int  count_sieve (       ); // Return number of primes in sieve.
+        int  count_le    ( int n ); // Return number of primes <= n.
+        SV*  ranged_primes( int lower, int upper );
+                  // Return all primes where "lower <= primes <= upper".
     private:
         int max_n;
         int num_primes;
@@ -476,6 +573,28 @@ SV* Sieve::primes( int n )
             av_push( av, newSViv( i ) );
             num_primes++;   // Cache the number of primes generated.
         }
+    return newRV_noinc( (SV*) av );
+}
+
+SV* Sieve::ranged_primes( int lower, int upper )
+{
+    AV* av = newAV();
+    if(
+        upper > max_n ||        // upper exceeds upper bound.
+        lower > max_n ||        // lower exceeds upper bound.
+        upper < 2     ||        // No possible primes.
+        lower < 0     ||        // lower underruns bounds.
+        lower > upper ||        // zero-width range.
+        ( lower == upper && lower > 2 && !( lower % 2 ) ) // Even.
+    )
+        return newRV_noinc( (SV*) av );  // No primes possible.
+    if( lower <= 2 && upper >= 2 )
+        av_push( av, newSViv( 2 ) );     // Lower limit needs to be odd
+    if( lower < 3 ) lower = 3;           // Lower limit cannot < 3.
+    if( ( upper - lower ) > 0 && ! ( lower % 2 ) ) lower++;
+    for( int i = lower; i <= upper; i += 2 )
+        if( ! (*sieve)[i] )
+            av_push( av, newSViv( i ) );
     return newRV_noinc( (SV*) av );
 }
 

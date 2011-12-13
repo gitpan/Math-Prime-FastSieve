@@ -1,4 +1,4 @@
-Math-Prime-FastSieve version 0.02
+Math-Prime-FastSieve version 0.03
 ======================================
 
 This module implements the Sieve of Eratosthenes to find all primes
@@ -31,6 +31,7 @@ DEPENDENCIES
 
 This module requires these other modules and libraries:
 
+  Inline::MakeMaker - Used by Makefile.PL instead of ExtUtils::MakeMaker.
   Inline::CPP       - A primary dependency.
   Inline::C         - Inline::CPP is a subclass of Inline::C.
   Inline            - Inline::CPP and Inline::C plug into Inline.

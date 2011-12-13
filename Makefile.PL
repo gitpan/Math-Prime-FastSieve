@@ -6,6 +6,7 @@ WriteMakefile(
     NAME              => 'Math::Prime::FastSieve',
     VERSION_FROM      => 'lib/Math/Prime/FastSieve.pm', # finds $VERSION
     PREREQ_PM         => { 'Inline::CPP' => 0.33 },     # e.g., Module::Name => 1.1
+    BUILD_REQUIRES	  => { 'Inline'		 => 0.49 },
     (
 		$] >= 5.005   ## Add these new keywords supported since 5.005
 		? (
