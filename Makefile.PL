@@ -1,18 +1,20 @@
-use 5.008000;
+use 5.006000;
 use Inline::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
+
 WriteMakefile(
-    NAME              => 'Math::Prime::FastSieve',
-    VERSION_FROM      => 'lib/Math/Prime/FastSieve.pm', # finds $VERSION
-    PREREQ_PM         => { 'Inline::CPP' => 0.33 },     # e.g., Module::Name => 1.1
-    BUILD_REQUIRES	  => { 'Inline'		 => 0.49 },
-    (
-		$] >= 5.005   ## Add these new keywords supported since 5.005
-		? (
-				ABSTRACT_FROM  => 'lib/Math/Prime/FastSieve.pm', # retrieve abstract from module
-				AUTHOR         => 'David Oswald <davido@cpan.org>'
-		)
-		: ()
-	),
+    NAME              	=>	'Math::Prime::FastSieve',
+    VERSION_FROM      	=>	'lib/Math/Prime/FastSieve.pm',
+    ABSTRACT_FROM		=>	'lib/Math/Prime/FastSieve.pm',
+    AUTHOR				=>	'David Oswald <daoswald@cpan.org>',
+    PREREQ_PM         	=>	{
+								'Inline::CPP' 			=> 0.33
+							},
+    BUILD_REQUIRES		=>	{
+								'ExtUtils::MakeMaker'	=> 6.62,
+								'Inline::MakeMaker'		=> 0.45,
+							},
+    CONFIGURE_REQUIRES	=>	{
+								'Inline::MakeMaker'		=> 0.45,
+								'ExtUtils::MakeMaker'	=> 6.62,
+							},
 );

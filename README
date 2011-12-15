@@ -1,4 +1,4 @@
-Math-Prime-FastSieve version 0.03
+Math-Prime-FastSieve version 0.04
 ======================================
 
 This module implements the Sieve of Eratosthenes to find all primes
@@ -12,6 +12,8 @@ How fast?  Well at the time of writing it is the fastest solution I can
 find on CPAN, including Math::Prime::XS.  And it works all the way up to
 'n' of 2.14 billion.  Because it uses a bit sieve, the result set will
 actually consume more memory than the prime sieve.
+
+This module also provides several other prime numbers related functions.
 
 INSTALLATION
 

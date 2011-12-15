@@ -13,11 +13,11 @@ our @EXPORT_OK = qw( primes ); # We can export primes().
 
 our @EXPORT    = qw(        ); # Export nothing by default.
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 
 use Inline CPP      => 'DATA',
-           VERSION  => '0.03',
+           VERSION  => '0.04',
            NAME     => 'Math::Prime::FastSieve';
 
 # No real code here.  Everything is implemented in pure C++ using
@@ -77,8 +77,7 @@ of most modern systems.
     # Obtain a ref to an array containing all primes <= 5 Million.
     my $aref = $sieve->primes( 5_000_000 );
 
-    # Obtain a ref to an array containing all primes >= 5,
-    # and <= 16.
+    # Obtain a ref to an array containing all primes >= 5, and <= 16.
     my $aref = $sieve->ranged_primes( 5, 16 );
 
     # Query the sieve: Is 17 prime? Return a true or false value.
@@ -92,7 +91,7 @@ of most modern systems.
 
     # Count how many primes exist within the sieve (ie, count all primes less
     # than or equal to 5 Million, assuming we instantiated the sieve with
-    # ...->new( 5_000_000 );.
+    # Math::Prime::FastSieve::Sieve->new( 5_000_000 );.
     my $num_found = $sieve->count_sieve();
 
     # Count how many primes fall between 1 and 42 inclusive.
@@ -508,20 +507,20 @@ using namespace std;
 class Sieve
 {
     public:
-        Sieve            ( int n ); // Constructor. Perl sees "new()".
-        ~Sieve           (       ); // Destructor. Seen as "DESTROY()".
-        bool isprime     ( int n ); // Test if n is prime.
-        SV*  primes      ( int n ); // Return all primes in an aref.
-        int  nearest_le  ( int n ); // Return nearest prime <= n.
-        int  nearest_ge  ( int n ); // Return nearest prime >= n.
-        int  nth_prime   ( int n ); // Return the nth prime.
-        int  count_sieve (       ); // Return number of primes in sieve.
-        int  count_le    ( int n ); // Return number of primes <= n.
+        Sieve             ( int n ); // Constructor. Perl sees "new()".
+        ~Sieve            (       ); // Destructor. Seen as "DESTROY()".
+        bool isprime      ( int n ); // Test if n is prime.
+        SV*  primes       ( int n ); // Return all primes in an aref.
+        int  nearest_le   ( int n ); // Return nearest prime <= n.
+        int  nearest_ge   ( int n ); // Return nearest prime >= n.
+        int  nth_prime    ( int n ); // Return the nth prime.
+        int  count_sieve  (       ); // Return number of primes in sieve.
+        int  count_le     ( int n ); // Return number of primes <= n.
         SV*  ranged_primes( int lower, int upper );
                   // Return all primes where "lower <= primes <= upper".
     private:
-        int max_n;
-        int num_primes;
+        int           max_n;
+        int           num_primes;
         vector<bool>* sieve;
 };
 
