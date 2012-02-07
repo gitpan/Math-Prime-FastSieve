@@ -8,7 +8,7 @@ configure_requires:
   ExtUtils::MakeMaker: 6.62
   Inline::MakeMaker: 0.45
 dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.112150'
+generated_by: 'ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.113640'
 license: unknown
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -20,5 +20,5 @@ no_index:
     - inc
 requires:
   Inline: 0.44
-  Inline::CPP: 0.33
-version: 0.06
+  Inline::CPP: 0.34
+version: 0.07
