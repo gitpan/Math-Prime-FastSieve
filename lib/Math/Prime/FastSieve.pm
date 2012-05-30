@@ -12,11 +12,11 @@ our @EXPORT_OK = qw( primes primes2 );    # We can export primes().
 
 # our @EXPORT    = qw(        ); # Export nothing by default.
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use Inline
     CPP     => 'DATA',
-    VERSION => '0.10',
+    VERSION => '0.11',
     NAME    => 'Math::Prime::FastSieve';
 
 
@@ -195,7 +195,9 @@ the sieve to scale well without consuming so much memory that your
 system grinds to a stand-still for large C<$n>s (where "large" depends
 on your system, of course).
 
-=item * Only sifts and tests odd integers.
+=item * The sieve's bits only represent odd numbers (memory optimization).
+
+=item * Only sifts and tests odd integers. (2 is handled as a special case.)
 
 =item * Returns an array-ref rather than a potentially huge (slow) list.
 
@@ -221,8 +223,10 @@ functionality that may be computationally (and memory) cheaper to obtain
 from the sieve, you can get at those results without constructing a huge
 list of primes.
 
-The standard interface is faster.  But the object interface is still
-very fast, and provides greater flexibility.
+The standard interface is slightly faster if you just want a big list.  But
+the object interface is still very fast, and provides greater flexibility,
+including the ability to use C<ranged_primes()> to process primes in smaller,
+more memory efficient chunks.
 
 
 =head3 new()
@@ -362,16 +366,13 @@ If there is no nth prime in the bounds of the sieve C<0> is returned.
 
 =head1 Implementation Notes
 
-The sieve is implemented as a bit sieve using a C++ vector<bool>.  All
-integers from 0 to C<$n> are represented based on their index within the sieve
-(evens too). A bit sieve is highly efficient from a memory standpoint because
-obviously it only consumes one byte per eight integers. It could be
-further improved (from a memory standpoint) by only representing odd
-integers within the sieve. However, an odds-only sieve would introduce
-additional computational cycles inside of a very tight loop, and
-consequently could degrade time performance.  For that reason I chose to leave
-evens in the sieve, doubling the sieve footprint but trimming a lot of
-potential computational overhead away.
+The sieve is implemented as a bit sieve using a C++ vector<bool>.  All odd
+integers from 3 to C<$n> are represented based on their index within the
+sieve. The only even prime, 2, is handled as a special case.  A bit sieve is
+highly efficient from a memory standpoint because obviously it only consumes
+one byte per eight integers. This sieve is further optimized by reperesenting
+only odd integers in the sieve.  So a sieve from 0 .. 1_000_000_000 only needs
+500_000_000 bits, or 59.6 MB.  
 
 So, while a bit sieve was used for memory efficiency, just about every
 other optimization favored reducing time complexity.
@@ -388,18 +389,15 @@ but the list passed back to Perl via an array-ref.
 
 If you find that your system memory isn't allowing you to call C<primes>
 with as big an integer as you wish, use the object oriented interface.
-C<new> will generate a sieve up to the largest integer your system
-allows (often a little over 2.14 billion).  Then rather than calling
-the C<primes> method, use C<nearest_ge> to iterate over the list.
-Of course this is slower, but it beats running out of memory doesn't it?
+C<new> will generate a sieve up to the largest integer your system.  Then
+rather than calling the C<primes> method, use C<ranged_primes>, or
+C<nearest_ge> to iterate over the list. Of course this is slightly slower, but
+it beats running out of memory doesn't it?
 
 NOTE: As of version 0.10, support for long ints is built into
 Math::Prime::FastSieve.  If your version of Perl was built with support for
 long ints, you can create sieve sizes well over the 2.14 billion limit that
-standard ints impose.  B<Long int support is an experimental feature in
-version 0.10.  If smoke testing turns out well, it will become a stable
-feature.  If smoke tests turn out poorly as a result, the feature will be
-removed or implemented differently, possibly as separate functions.>
+standard ints impose.
 
 =head1 DEPENDENCIES
 
@@ -505,7 +503,17 @@ L<http://search.cpan.org/dist/Math-Prime-FastSieve/>
 
 This module is made possible by Inline::CPP, which wouldn't be possible
 without the hard work of the folks involved in the Inline and Inline::C
-project.
+project.  There are many individuals who have contributed and continue to
+contribute to the Inline project.  I won't name them all here, but they do
+deserve thanks and credit.
+
+Dana Jacobsen provided several optimizations that improved even further on
+the speed and memory performance of this module.  Dana's contributions include
+reducing the memory footprint of the bit sieve in half, and trimming cycles by
+cutting in half the number of iterations of an inner loop in the sieve
+generator.  This module started fast and got even faster (and more memory
+efficient) with Dana's contributions.
+
 
 =head1 LICENSE AND COPYRIGHT
 
@@ -565,26 +573,28 @@ class Sieve
         SV*  ranged_primes( long lower, long upper );
                   // Return all primes where "lower <= primes <= upper".
     private:
-        std::vector<bool>::size_type    max_n;
-        unsigned long                   num_primes;
-        vector<bool>* sieve;
+        std::vector<bool>::size_type max_n;
+        unsigned long                num_primes;
+        vector<bool>*                sieve;
 };
 
 
 // Set up a primes sieve of 0 .. n inclusive.
+// This sieve has been optimized to only represent odds, cutting memory
+// footprint in half.
 Sieve::Sieve( long n )
 {
-    std::vector<bool>* primes = new std::vector<bool>( n + 1, 0 );
-    num_primes = 0;
+    std::vector<bool>* primes = new std::vector<bool>( n/2 + 1, 0 );
+    num_primes = 0UL;
     if( n < 0 ) // Trap negative n's before we start wielding unsigned longs.
-        max_n = 0;
+        max_n = 0UL;
     else
     {
         max_n = n;
         for( std::vector<bool>::size_type i = 3; i * i <= n; i+=2 )
-            if( ! (*primes)[i] )
-                for( std::vector<bool>::size_type k, j=i; (k=i*j) <= n; j+=2 )
-                    (*primes)[k] = 1;
+            if( ! (*primes)[i/2] )
+                for( std::vector<bool>::size_type k = i*i; k <= n; k += 2*i)
+                    (*primes)[k/2] = 1;
     }
     sieve = primes;
 }
@@ -603,7 +613,7 @@ bool Sieve::isprime( long n )
     if( n < 2 || n > max_n )  return false; // Bounds checking.
     if( n == 2 )              return true;  // 2 is prime.
     if( ! ( n % 2 ) )         return false; // No other evens are prime.
-    if( ! ( (*sieve)[n] ) )   return true;  // 0 bit signifies prime.
+    if( ! ( (*sieve)[n/2] ) ) return true;  // 0 bit signifies prime.
     return false;                           // default: not prime.
 }
 
@@ -617,11 +627,11 @@ SV* Sieve::primes( long n )
     if( n < 2 || n > max_n ) // Logical short circuit order is significant
                              // since we're about to wield unsigned longs.
         return newRV_noinc( (SV*) av );
-    av_push( av, newSVuv( 2U ) );
+    av_push( av, newSVuv( 2UL ) );
     num_primes = 1;          // Count 2; it's prime.
     for( std::vector<bool>::size_type i = 3; i <= n; i += 2 )
-        if( ! (*sieve)[i] )
-            av_push( av, newSVuv( i ) );
+        if( ! (*sieve)[i/2] )
+            av_push( av, newSVuv( static_cast<unsigned long>(i) ) );
     return newRV_noinc( (SV*) av );
 }
 
@@ -638,12 +648,12 @@ SV* Sieve::ranged_primes( long lower, long upper )
     )
         return newRV_noinc( (SV*) av );  // No primes possible.
     if( lower <= 2 && upper >= 2 )
-        av_push( av, newSVuv( 2U ) );    // Lower limit needs to be odd
+        av_push( av, newSVuv( 2UL ) );    // Lower limit needs to be odd
     if( lower < 3 ) lower = 3;           // Lower limit cannot < 3.
     if( ( upper - lower ) > 0 && ! ( lower % 2 ) ) lower++;
     for( std::vector<bool>::size_type i = lower; i <= upper; i += 2 )
-        if( ! (*sieve)[i] )
-            av_push( av, newSVuv( i ) );
+        if( ! (*sieve)[i/2] )
+            av_push( av, newSVuv( static_cast<unsigned long>(i) ) );
     return newRV_noinc( (SV*) av );
 }
 
@@ -655,15 +665,13 @@ unsigned long Sieve::nearest_le( long n )
     // disqualify negative numbers before we do comparisons against
     // unsigned longs.
     if( n < 2 || n > max_n ) return 0; // Bounds checking.
-    if( n == 2 ) return 2U;            // 2 is the only even prime.
-    if( ! ( n % 2 ) ) n--;             // Result has to be odd.
-    std::vector<bool>::size_type n_index = n;
-    while( n_index > 2 )
-    {
-        if( ! (*sieve)[n_index] ) return n_index;
-        n_index -= 2;  // Only test odds.
-    }
-    return 0; // We should never get here.
+    if( n == 2 ) return 2UL;            // 2 is the only even prime.
+    // Even numbers map to the next odd number down.
+    std::vector<bool>::size_type n_idx = (n-1)/2;  // n_idx >= 1
+    do {
+       if( ! (*sieve)[n_idx] )  return static_cast<unsigned long>(2*n_idx+1);
+    } while (--n_idx > 0);
+    return 0UL; // We should never get here.
 }
 
 
@@ -674,16 +682,15 @@ unsigned long Sieve::nearest_ge( long n )
     // Because max_n is unsigned, testing "n > max_n" for values where
     // n is negative results in n being treated as a real big unsigned value.
     // Thus we MUST handle negatives before testing max_n.
-    if( n <= 2 ) return 2U;              // 2 is only even prime.
-    if( n > max_n ) return 0U;           // Bounds checking.
-    std::vector<bool>::size_type n_idx = n;
-    if( ! ( n_idx % 2 ) ) n_idx++;              // Start with an odd number.
-    while( n_idx <= max_n )
-    {
-        if( ! (*sieve)[n_idx] ) return n_idx;
-        n_idx+=2; // Only test odds.
-    }
-    return 0U;   // We've run out of sieve to test.
+    if( n <= 2 ) return 2UL;              // 2 is only even prime.
+    n |= 1;                              // Make sure n is odd before check.
+    if( n > max_n ) return 0UL;           // Bounds checking.
+    std::vector<bool>::size_type n_idx = n/2;
+    std::vector<bool>::size_type max_idx = max_n/2;
+    do {
+       if( ! (*sieve)[n_idx] )  return static_cast<unsigned long>(2*n_idx+1);
+    } while (++n_idx < max_idx);
+    return 0UL;   // We've run out of sieve to test.
 }
 
 
@@ -697,10 +704,10 @@ unsigned long Sieve::nth_prime( long n )
     unsigned long count = 1;
     for( std::vector<bool>::size_type i = 3; i <= max_n; i += 2 )
     {
-        if( ! (* sieve)[i] ) count++;
-        if( count == n ) return i;
+        if( ! (* sieve)[i/2] ) count++;
+        if( count == n ) return static_cast<unsigned long>(i);
     }
-    return 0U;
+    return 0UL;
 }
 
 
@@ -708,9 +715,9 @@ unsigned long Sieve::nth_prime( long n )
 // calculated, they're cached.  First time through is O(n).
 unsigned long Sieve::count_sieve ()
 {
-    if( num_primes > 0 ) return num_primes;
+    if( num_primes > 0 ) return static_cast<unsigned long>(num_primes);
     num_primes = this->count_le( max_n );
-    return num_primes;
+    return static_cast<unsigned long>(num_primes);
 }
 
 
@@ -718,10 +725,10 @@ unsigned long Sieve::count_sieve ()
 // the data member num_primes will be set.
 unsigned long Sieve::count_le( long n )
 {
-    if( n <= 1 || n > max_n ) return 0;
-    unsigned long count = 1;      // 2 is prime. Count it.
+    if( n <= 1 || n > max_n ) return 0UL;
+    unsigned long count = 1UL;      // 2 is prime. Count it.
     for( std::vector<bool>::size_type i = 3; i <= n; i+=2 )
-        if( !(*sieve)[i] ) count++;
+        if( !(*sieve)[i/2] ) count++;
     if( n == max_n && num_primes == 0 ) num_primes = count;
     return count;
 }
@@ -730,7 +737,9 @@ unsigned long Sieve::count_le( long n )
 // ---------------- For export: Not part of Sieve class ----------------
 
 /* Sieve of Eratosthenes.  Return a reference to an array containing all
- * prime numbers less than or equal to search_to.
+ * prime numbers less than or equal to search_to.  Uses an optimized sieve
+ * that requires one bit per odd from 0 .. n.  Evens aren't represented in the
+ * sieve.  2 is just handled as a special case.
  */
 
 
@@ -739,19 +748,17 @@ SV* primes( long search_to )
     AV* av = newAV();
     if( search_to < 2 )
         return newRV_noinc( (SV*) av ); // Return an empty list ref.
-    av_push( av, newSVuv( 2U ) );
-    std::vector<bool> primes( search_to + 1, 0 );
-    for( std::vector<bool>::size_type i = 3; i * i <= search_to; i += 2 )
-        if( ! primes[i] )
-            for
-            (
-                    std::vector<bool>::size_type k, j = i;
-                    ( k = i * j ) <= search_to;
-                    j += 2
-            )
-                primes[ k ] = 1;
+    av_push( av, newSVuv( 2UL ) );
+    // Allocate space for odd numbers (15 bits per 30 values)
+    std::vector<bool> primes( search_to/2 + 1, 0 );
+    // Sieve over the odd numbers
+    for( std::vector<bool>::size_type i = 3; i * i <= search_to; i+=2 )
+        if( ! primes[i/2] )
+            for( std::vector<bool>::size_type k = i*i; k <= search_to; k += 2*i)
+                primes[k/2] = 1;
+    // Add each prime to the list ref
     for( std::vector<bool>::size_type i = 3; i <= search_to; i += 2 )
-        if( ! primes[i] )
+        if( ! primes[i/2] )
             av_push( av, newSVuv( static_cast<unsigned long>( i ) ) );
     return newRV_noinc( (SV*) av );
 }
