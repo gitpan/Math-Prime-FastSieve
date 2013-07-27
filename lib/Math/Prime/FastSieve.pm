@@ -11,11 +11,11 @@ our @ISA = qw(Exporter);    ## no critic (isa)
 our @EXPORT_OK = qw( primes );    # We can export primes().
 our @EXPORT    = qw(        );    # Export nothing by default.
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 use Inline
     CPP     => 'DATA',
-    VERSION => '0.18',
+    VERSION => '0.19',
     NAME    => 'Math::Prime::FastSieve';
 
 
@@ -49,7 +49,7 @@ facilitates.
 
 =head1 VERSION
 
-Version 0.18
+Version 0.19
 
 
 =head1 DESCRIPTION
@@ -143,6 +143,7 @@ A list of all primes within the sieve.
 A list of all primes >= C<$lower>, and <= C<$upper>.
 
 =item * C<isprime($n)>
+
 =item * C<is_prime($n)>
 A primality test for any integer within the bounds of the sieve.  C<is_prime()>
 is synonymous for C<isprime()>, mostly because I got tired of forgetting
@@ -416,8 +417,8 @@ standard ints impose.
 You will need:  L<Inline|Inline>, L<Inline::C|Inline::C> (which is packaged
 with Inline), L<Parse::RecDescent|Parse::RecDescent>,
 L<Inline::MakeMaker|Inline::MakeMaker>,
-L<ExtUtils::MakeMaker|ExtUtils::MakeMaker> (core), and
-L<Test::More|Test::More> (core).
+L<ExtUtils::MakeMaker|ExtUtils::MakeMaker> (core), L<Inline::CPP|Inline::CPP>
+and L<Test::More|Test::More> (core).
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
@@ -472,8 +473,8 @@ The OO interface does provide functions that don't build a big huge
 memory-hungry list.
 
 
-Please report any bugs or feature requests to
-C<bug-math-prime-FastSieve at rt.cpan.org>, or through the web interface
+Please report any bugs to C<bug-math-prime-FastSieve at rt.cpan.org>, or
+through the web interface
 at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Math-Prime-FastSieve>.
 I will be notified, and then you'll automatically be notified of
 progress on your bug as I make changes.

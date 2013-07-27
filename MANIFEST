@@ -21,3 +21,4 @@ lib/Math/Prime/FastSieve.pm
 META.yml                                 Module YAML meta-data (added by MakeMaker)
 META.json                                Module JSON meta-data (added by MakeMaker)
 examples/nextprime.pl
+examples/ranged_primes.pl
